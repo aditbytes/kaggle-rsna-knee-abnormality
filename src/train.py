@@ -73,7 +73,8 @@ def main():
     ap.add_argument("--k", type=int, default=8, help="3-slice windows per series in training")
     ap.add_argument("--k_eval", type=int, default=12)
     ap.add_argument("--epochs", type=int, default=8)
-    ap.add_argument("--bs", type=int, default=4)
+    ap.add_argument("--bs", type=int, default=2, help="studies per step; 4 runs out of memory on a 16 GB T4")
+    ap.add_argument("--accum", type=int, default=2, help="gradient accumulation steps (effective batch = bs * accum)")
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--wd", type=float, default=0.05)
     ap.add_argument("--workers", type=int, default=4)
@@ -116,8 +117,8 @@ def main():
     enc = [p for n, p in model.named_parameters() if n.startswith("enc.")]
     rest = [p for n, p in model.named_parameters() if not n.startswith("enc.")]
     opt = torch.optim.AdamW([{"params": enc, "lr": args.lr}, {"params": rest, "lr": args.lr * 3}], weight_decay=args.wd)
-    steps = args.epochs * len(train_dl)
-    warm = max(1, len(train_dl) // 2)
+    steps = args.epochs * len(train_dl) // args.accum
+    warm = max(1, len(train_dl) // (2 * args.accum))
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda i: min(1, (i + 1) / warm) * 0.5 * (1 + math.cos(math.pi * min(1.0, i / steps))))
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
@@ -129,18 +130,20 @@ def main():
     for ep in range(args.epochs):
         model.train()
         t0, tot, n = time.time(), 0.0, 0
-        for x, mask, pos, y in train_dl:
+        opt.zero_grad(set_to_none=True)
+        for i, (x, mask, pos, y) in enumerate(train_dl, 1):
             x, mask, pos, y = x.to(device), mask.to(device), pos.to(device), y.to(device)
             with torch.autocast(device.type, dtype=torch.float16, enabled=device.type == "cuda"):
                 logits = model(x, mask, pos, res=args.res, train=True, flip=True)
             loss = loss_fn(logits.float(), y)
-            opt.zero_grad(set_to_none=True)
-            scaler.scale(loss).backward()
-            scaler.unscale_(opt)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
-            scaler.step(opt)
-            scaler.update()
-            sched.step()
+            scaler.scale(loss / args.accum).backward()
+            if i % args.accum == 0:
+                scaler.unscale_(opt)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
+                scaler.step(opt)
+                scaler.update()
+                sched.step()
+                opt.zero_grad(set_to_none=True)
             tot, n = tot + loss.item() * len(y), n + len(y)
         pv, pg = predict(model, val_dl, device, args.res), predict(model, gold_dl, device, args.res)
         row = {"epoch": ep, "loss": tot / max(n, 1), "minutes": (time.time() - t0) / 60,

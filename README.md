@@ -1,0 +1,91 @@
+# Knee MRI Abnormality Detection · RSNA 2026
+
+My work on the [RSNA Knee Abnormality Detection](https://www.kaggle.com/competitions/rsna-knee-abnormality-detection) Kaggle research competition:
+from a knee MRI study, predict the probability of **twelve findings** (ligament and meniscus tears, osteoarthritis, effusion, synovitis, Baker's cyst, bone contusion, fracture).
+
+| | |
+|---|---|
+| **Task** | Multi-label classification, 12 binary findings per study |
+| **Metric** | Macro ROC AUC (mean of the 12 per-finding AUCs) |
+| **Data** | 4,407 train studies · 24,371 series · ~819k DICOM slices (~500 GB) · ~1,300 hidden test studies |
+| **Labels** | Only **58** studies are labelled; all 4,407 have a free-text radiology report in one of ~10 languages |
+| **Submission** | Kaggle notebook, ≤ 9 h GPU, no internet, reports **not** available at test time |
+| **Timeline** | 30 Jul 2026 → **22 Oct 2026** (entry/merger deadline 15 Oct) · 5 submissions/day |
+
+## The core problem
+
+The test set has images only, but almost all supervision lives in the reports. So the pipeline is two steps:
+
+1. **Reports → labels.** Turn 4,349 multilingual reports into 12 soft labels (an LLM reads each report).
+   The best public label sets agree with the radiologists' 58 gold labels at **~0.89 macro AUC** ([reports/eda.md](reports/eda.md)).
+2. **Images → predictions.** Train image models on those soft labels and score the hidden test studies from MRI alone.
+
+## Key findings from EDA
+
+Full report: [reports/eda.md](reports/eda.md) (regenerate with `python src/eda.py`).
+
+- **58 gold labels are balanced on purpose** (e.g. effusion 60%, fracture 31%), so they are a validation set, not a training set.
+- **Reports are multilingual**: English 1,733 · Turkish 831 · Spanish 682 · Greek 321 · Cyrillic 220 · German 180 · Dutch 144 · Croatian/Bosnian 139 · French 81.
+- **Every study has all three planes** (sagittal, coronal, axial), usually one fluid-sensitive fat-suppressed and one T1/PD series per plane.
+- **Synovitis is the hardest label to read from reports** (≤ 0.79 AUC vs gold): reports rarely mention it.
+- **Slices vary a lot** (local sample): 512–768 px, 0.22–0.33 mm pixels, 2.5–4 mm thick, mixed JPEG Lossless / JPEG 2000 / uncompressed transfer syntaxes.
+
+## Leaderboard context (6 Oct 2026, 5,314 teams)
+
+| Medal | Rank needed | Public score now |
+|---|---|---|
+| Gold | top 20 | ≥ 0.958 |
+| Silver | top 265 | ≥ 0.945 |
+| Bronze | top 531 | ≥ 0.944 (tie-heavy) |
+
+~1,200 teams sit at exactly 0.943–0.944: forks of the public community stack.
+The public 0.944 notebook is that stack blended **70/30 with one independently trained model** (0.929 alone),
+so the way up is a *different* model of my own blended into the stack.
+
+## Plan
+
+| Stage | What | Status |
+|---|---|---|
+| k01 | Fork of the public 0.944 stack, as a reference submission | running |
+| k02 | My own 2.5D reader trained on report soft labels (Kaggle GPU) | next |
+| k03 | Rank blend: stack + public reader + my reader, weights per finding | |
+| final | Two picks: a safe blend and a bolder one | |
+
+## Kernels
+
+| Kernel | Public LB | Notes |
+|---|---|---|
+| [k01-public-stack-baseline](kernels/k01-public-stack-baseline) | – | unmodified fork of [goodpjw2008's 0.944 notebook](https://www.kaggle.com/code/goodpjw2008/rsna-knee-stack-2-5d-convnext-mil-lb-0-944) |
+
+## Data
+
+Competition data is never committed (Kaggle rules forbid redistributing it).
+`data/` is a symlink to an external SSD:
+
+```
+data -> /Volumes/Aditya ssd/KAGGLE_DATA/rsna-knee-abnormality-detection
+  raw/      train.csv, train_series.csv, test*.csv, sample_submission.csv
+  sample/   a few full studies as DICOM, for local debugging (src/download_sample.py)
+  ext/      public report-label datasets (CC0)
+  cache/    public preprocessed 3D volumes (17 GB)
+```
+
+Training and submissions run on Kaggle, where the full ~500 GB is mounted; the Mac (M4, 16 GB) is for code, EDA and small experiments.
+
+## How to run
+
+```bash
+uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+kaggle competitions download rsna-knee-abnormality-detection -f train.csv -p data/raw   # also train_series.csv, test*.csv
+python src/download_sample.py --studies 5   # a few DICOM studies for local tests
+python src/eda.py                           # -> reports/eda.md
+```
+
+## Repo layout
+
+```
+src/        download_sample.py, eda.py
+kernels/    Kaggle notebooks (each folder has kernel-metadata.json; push with `kaggle kernels push -p kernels/<name>`)
+reports/    eda.md
+docs/       pipeline diagram (draw.io)
+```

@@ -49,14 +49,15 @@ class DicomStudyDataset(torch.utils.data.Dataset):
         return torch.from_numpy(x), torch.from_numpy(mask), torch.from_numpy(pos)
 
 
-def load_models(ckpts, device="cuda"):
+def load_models(ckpts, device):
     models = []
     for path in ckpts:
         ck = torch.load(path, map_location="cpu", weights_only=False)
         # the pretrained tag after the dot is irrelevant here and unknown to older timm versions
         m = KneeNet(ck["args"]["backbone"].split(".")[0], pretrained=False)
         m.load_state_dict(ck["model"])
-        models.append((m.to(device).to(memory_format=torch.channels_last).eval(), ck["args"]["res"]))
+        m = m.to(device).eval()
+        models.append((m.to(memory_format=torch.channels_last) if device.type == "cuda" else m, ck["args"]["res"]))
     return models
 
 
@@ -72,13 +73,14 @@ def run(data_dir, split, ckpts, k=12, studies=None, workers=4, bs=4):
         d = f"{root}/{st}/{sr}"
         n_files[sr] = min(len(os.listdir(d)), MAX_SLICES) if os.path.isdir(d) else 0
     table = build_study_table(se, n_files)
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     dl = torch.utils.data.DataLoader(DicomStudyDataset(studies, table, root, k), batch_size=bs,
-                                     num_workers=workers, pin_memory=True)
-    models = load_models(ckpts)
+                                     num_workers=workers, pin_memory=device.type == "cuda")
+    models = load_models(ckpts, device)
     out = []
     for x, mask, pos in dl:
-        x, mask, pos = x.cuda(non_blocking=True), mask.cuda(), pos.cuda()
-        with torch.autocast("cuda", dtype=torch.float16):
+        x, mask, pos = x.to(device, non_blocking=True), mask.to(device), pos.to(device)
+        with torch.autocast(device.type, dtype=torch.float16, enabled=device.type == "cuda"):
             p = torch.stack([m(x, mask, pos, res=res).float().sigmoid() for m, res in models]).mean(0)
         out.append(p.cpu())
     return pd.DataFrame(torch.cat(out).numpy(), index=pd.Index(studies, name="StudyInstanceUID"), columns=LABELS)

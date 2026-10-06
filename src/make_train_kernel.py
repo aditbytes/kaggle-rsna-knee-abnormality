@@ -17,6 +17,7 @@ LABEL_DATASETS = ["stevenleehans/rsna-knee-llm-report-labels"]
 
 RUNNER = '''
 import os, subprocess, sys
+print("runner start", sys.version, flush=True)
 os.makedirs("/kaggle/working/src", exist_ok=True)
 for name, code in SOURCES.items():
     with open(f"/kaggle/working/src/{{name}}", "w") as f:
@@ -27,11 +28,15 @@ for gpu, fold in enumerate({folds}):
     cmd = [sys.executable, "-u", "/kaggle/working/src/train.py", "--fold", str(fold), "--workers", "2"] + {extra}
     log = open(f"/kaggle/working/train_f{{fold}}.log", "w")
     procs.append((fold, subprocess.Popen(cmd, env=env, stdout=log, stderr=subprocess.STDOUT), log))
+print("launched folds", [f for f, _, _ in procs], flush=True)
+codes = []
 for fold, p, log in procs:
-    p.wait()
+    codes.append(p.wait())
     log.close()
-    print(f"===== fold {{fold}} exit {{p.returncode}}")
-    print(open(f"/kaggle/working/train_f{{fold}}.log").read()[-4000:])
+    print(f"===== fold {{fold}} exit {{p.returncode}}", flush=True)
+    print(open(f"/kaggle/working/train_f{{fold}}.log").read()[-4000:], flush=True)
+if any(codes):
+    sys.exit(1)
 '''
 
 

@@ -6,8 +6,13 @@ Canonical means: fixed physical pixel size, centre crop to a fixed field of view
 standard in-plane orientation, standard slice order and a per-series intensity window.
 The same `load_series` is used for the training cache and for inference.
 
-Usage: python src/preprocess.py [train|test] [n_series_limit]
+Changes from the original: 256 px at 0.6 mm (same 153.6 mm field of view, 2.25x fewer pixels)
+and at most 32 slices per series, so the whole train cache (~48 GB) fits in four Kaggle
+notebook outputs (20 GB each); data paths are found automatically; studies can be sharded.
+
+Usage: python src/preprocess.py [train|test] [shard] [n_shards] [n_series_limit]
 """
+import glob
 import os
 import sys
 from multiprocessing import Pool
@@ -17,12 +22,23 @@ import numpy as np
 import pandas as pd
 import pydicom
 
-DATA = "/mnt/ssd/rsna_knee/data"
-WORK = "/mnt/ssd/rsna_knee/work"
 
-MM_PER_PX = 0.4
-SIZE = 384  # 153.6 mm field of view
-MAX_SLICES = 64
+def find_data():
+    """Folder holding train_series.csv: Kaggle's competition mount, else the local data/raw."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    for pat in ["/kaggle/input/*/", "/kaggle/input/*/*/", f"{here}/../data/raw/"]:
+        for d in sorted(glob.glob(pat)):
+            if os.path.exists(os.path.join(d, "train_series.csv")):
+                return d.rstrip("/")
+    raise FileNotFoundError("train_series.csv")
+
+
+DATA = os.environ.get("KNEE_DATA") or find_data()
+WORK = os.environ.get("KNEE_WORK", "/kaggle/working" if os.path.isdir("/kaggle/working") else "outputs")
+
+MM_PER_PX = 0.6
+SIZE = 256  # 153.6 mm field of view
+MAX_SLICES = 32
 
 # plane -> (normal axis, slice-order sign, (col axis, sign), (row axis, sign)) in LPS coordinates
 # Sagittal: slices right->left, image columns anterior->posterior, rows superior->inferior
@@ -139,17 +155,27 @@ def _job(args):
     return info
 
 
+def shard_studies(studies, shard, n_shards):
+    """Deterministic split of study ids into n_shards groups."""
+    return set(sorted(set(studies))[shard::n_shards])
+
+
 def main():
     split = sys.argv[1] if len(sys.argv) > 1 else "train"
-    limit = int(sys.argv[2]) if len(sys.argv) > 2 else None
+    shard = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+    n_shards = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+    limit = int(sys.argv[4]) if len(sys.argv) > 4 else None
     out_dir = f"{WORK}/cache{SIZE}_{split}"
     os.makedirs(out_dir, exist_ok=True)
     se = pd.read_csv(f"{DATA}/{split}_series.csv")
+    se = se[se.StudyInstanceUID.isin(shard_studies(se.StudyInstanceUID, shard, n_shards))]
     if limit:
-        se = se.sample(limit, random_state=0)
+        se = se.sample(min(limit, len(se)), random_state=0)
     tasks = [(split, a, b, p, out_dir) for a, b, p in zip(se.StudyInstanceUID, se.SeriesInstanceUID, se.Anatomical_Plane)]
+    print(f"{split} shard {shard}/{n_shards}: {se.StudyInstanceUID.nunique()} studies, {len(tasks)} series, "
+          f"{os.cpu_count()} CPUs", flush=True)
     rows = []
-    with Pool(18) as p:
+    with Pool(os.cpu_count()) as p:
         for i, r in enumerate(p.imap_unordered(_job, tasks, chunksize=4)):
             if r:
                 rows.append(r)

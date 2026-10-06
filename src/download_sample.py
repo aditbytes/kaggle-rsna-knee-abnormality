@@ -9,10 +9,12 @@ their slices in parallel into data/sample/train_series/<study>/<series>/<sop>.dc
 """
 import argparse
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from kaggle.api.kaggle_api_extended import KaggleApi
+from requests.exceptions import HTTPError
 
 COMP = "rsna-knee-abnormality-detection"
 OUT = Path(__file__).resolve().parents[1] / "data" / "sample"
@@ -35,32 +37,39 @@ def list_study_files(api, n_studies):
             return studies
 
 
-def download(api, name):
+def download(api, name, size, retries=8):
+    """Download one slice; skip it if already complete, back off when Kaggle rate-limits (HTTP 429)."""
     dest = OUT / name
-    if dest.exists():
-        return 0
+    if dest.exists() and dest.stat().st_size == size:
+        return
     dest.parent.mkdir(parents=True, exist_ok=True)
-    api.competition_download_file(COMP, name, path=str(dest.parent), quiet=True)
-    return dest.stat().st_size
+    for attempt in range(retries):
+        try:
+            api.competition_download_file(COMP, name, path=str(dest.parent), force=True, quiet=True)
+            return
+        except HTTPError as e:
+            if e.response is None or e.response.status_code != 429 or attempt == retries - 1:
+                raise
+            time.sleep(min(60, 2 ** attempt))
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--studies", type=int, default=20)
-    ap.add_argument("--workers", type=int, default=16)
+    ap.add_argument("--workers", type=int, default=4)  # more than this triggers Kaggle's rate limit
     args = ap.parse_args()
 
     api = KaggleApi()
     api.authenticate()
     studies = list_study_files(api, args.studies)
-    files = [name for fs in studies.values() for name, _ in fs]
-    total = sum(b for fs in studies.values() for _, b in fs)
+    files = [f for fs in studies.values() for f in fs]
+    total = sum(b for _, b in files)
     print(f"{len(studies)} studies, {len(files)} slices, {total / 1e9:.2f} GB")
 
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "manifest.json").write_text(json.dumps(studies, indent=1))
     with ThreadPoolExecutor(args.workers) as pool:
-        for i, _ in enumerate(pool.map(lambda n: download(api, n), files), 1):
+        for i, _ in enumerate(pool.map(lambda f: download(api, *f), files), 1):
             if i % 500 == 0 or i == len(files):
                 print(f"  {i}/{len(files)} downloaded", flush=True)
 

@@ -16,6 +16,7 @@ PLANES = ["Sagittal", "Coronal", "Axial"]
 N_SLOTS = 6
 MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
+CACHE_SIZE = 256  # must match preprocess.SIZE
 
 
 def slot_of(plane, fat_sup):
@@ -78,7 +79,7 @@ class StudyDataset(torch.utils.data.Dataset):
                 x = np.zeros((N_SLOTS, self.k) + win.shape[1:], np.uint8)
             x[s], mask[s], pos[s] = win, True, c / max(n - 1, 1)
         if x is None:
-            x = np.zeros((N_SLOTS, self.k, 3, 384, 384), np.uint8)
+            x = np.zeros((N_SLOTS, self.k, 3, CACHE_SIZE, CACHE_SIZE), np.uint8)
         y = self.targets[i] if self.targets is not None else np.zeros(len(LABELS), np.float32)
         return torch.from_numpy(x), torch.from_numpy(mask), torch.from_numpy(pos), torch.from_numpy(np.asarray(y, np.float32))
 

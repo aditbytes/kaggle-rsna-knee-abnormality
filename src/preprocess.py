@@ -30,7 +30,7 @@ def find_data():
         for d in sorted(glob.glob(pat)):
             if os.path.exists(os.path.join(d, "train_series.csv")):
                 return d.rstrip("/")
-    raise FileNotFoundError("train_series.csv")
+    return None  # only the cache-building main() needs it; inference passes its own folders
 
 
 DATA = os.environ.get("KNEE_DATA") or find_data()

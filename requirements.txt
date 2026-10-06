@@ -2,6 +2,7 @@ pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.5
 matplotlib>=3.8
+opencv-python-headless>=4.10
 # DICOM reading (JPEG Lossless / JPEG 2000 transfer syntaxes need the pylibjpeg plugins)
 pydicom>=3.0
 pylibjpeg>=2.0

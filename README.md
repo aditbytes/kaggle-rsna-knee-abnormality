@@ -46,10 +46,22 @@ so the way up is a *different* model of my own blended into the stack.
 
 | Stage | What | Status |
 |---|---|---|
-| k01 | Fork of the public 0.944 stack, as a reference submission | running |
-| k02 | My own 2.5D reader trained on report soft labels (Kaggle GPU) | next |
+| k01 | Fork of the public 0.944 stack, as a reference submission | submitted, scoring |
+| k02 | 256 px training cache, 4 sharded CPU kernels (~41 GB) | running |
+| k03 | My own 2.5D reader: EfficientNetV2-S on report soft labels, 4 folds on 2x T4 | ready |
 | k03 | Rank blend: stack + public reader + my reader, weights per finding | |
 | final | Two picks: a safe blend and a bolder one | |
+
+## My reader (k03)
+
+Same study-level design as the public ConvNeXt reader (Apache 2.0, credited in `src/knee.py`), trained independently so it adds diversity to the blend:
+
+- **Preprocessing** ([src/preprocess.py](src/preprocess.py)): each series is reoriented to a canonical view, resampled to 0.6 mm pixels, centre-cropped to 153.6 mm (256 px) and capped at 32 slices.
+- **Model** ([src/knee.py](src/knee.py)): a 2D backbone reads 3-slice windows (8 per series) from up to 6 series; a small transformer mixes all windows of the study; one attention pooling per finding.
+- **Different from the public reader**: EfficientNetV2-S instead of ConvNeXt-Tiny, 224 px instead of 256+, and `llm_labels_v4_blend` soft labels.
+- **Validation**: the 58 gold studies are never trained on; each epoch logs gold macro AUC and held-out AUC against the report labels.
+
+![Canonical slices](docs/canonical_slices.png)
 
 ## Kernels
 
@@ -84,7 +96,8 @@ python src/eda.py                           # -> reports/eda.md
 ## Repo layout
 
 ```
-src/        download_sample.py, eda.py
+src/        download_sample.py, eda.py, preprocess.py, knee.py, train.py,
+            make_cache_kernels.py, make_train_kernel.py
 kernels/    Kaggle notebooks (each folder has kernel-metadata.json; push with `kaggle kernels push -p kernels/<name>`)
 reports/    eda.md
 docs/       pipeline diagram (draw.io)

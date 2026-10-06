@@ -29,7 +29,7 @@ try:
             f.write(code)
     procs = []
     for gpu, fold in enumerate({folds}):
-        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu))
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
         cmd = [sys.executable, "-u", "/kaggle/working/src/train.py", "--fold", str(fold), "--workers", "2"] + {extra}
         log = open(f"/kaggle/working/train_f{{fold}}.log", "w")
         procs.append((fold, subprocess.Popen(cmd, env=env, stdout=log, stderr=subprocess.STDOUT), log))

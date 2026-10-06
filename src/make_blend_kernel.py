@@ -5,7 +5,7 @@ Appends cells to the k01 notebook that write my preprocess/knee/infer code to
 training-kernel outputs, and blend: final = rank((1 - w) * rank(stack) + w * rank(mine)).
 If my reader fails for any reason, the stack's submission.csv is kept unchanged.
 
-    python src/make_blend_kernel.py --name k04-blend --weight 0.2 --train-kernels k03-effv2s-f01
+    python src/make_blend_kernel.py --name k04-blend --weight 0.2 --train-kernels k03b-effv2s
 """
 import argparse
 import json

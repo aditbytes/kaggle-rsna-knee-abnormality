@@ -49,8 +49,9 @@ so the way up is a *different* model of my own blended into the stack.
 | k01 | Fork of the public 0.944 stack, as a reference submission | **0.944** public LB |
 | k02 | 256 px training cache, 4 sharded CPU kernels (24,371 series, 0 errors) | done |
 | k03b | My reader v1: EfficientNetV2-S, 224 px, 8 epochs, folds 0-1 | done: **0.838** gold AUC |
-| k04 / k05 | Stack + v1 at weight 0.2 / v1 alone (calibrates the blend weight) | submitted, scoring |
-| k06 | My reader v2: 256 px, 14 epochs, all 4 folds | training |
+| k04 / k05 | Stack + v1 at weight 0.2 / v1 alone (calibrates the blend weight) | **0.937** / **0.860**: v1 is too weak to help the stack |
+| k06 | My reader v2: 256 px, 14 epochs, all 4 folds | 3 of 4 folds diverged (lr too high); fold 2 = 0.864 gold |
+| k07 | My reader v3: 256 px, lr 1.5e-4, 1-epoch warm-up, 12 epochs | training |
 | final | Two picks: a safe blend and a bolder one | |
 
 ## My reader (k03)
@@ -86,13 +87,20 @@ The image model beats its own training labels on effusion, Baker's cyst, contusi
 and is weakest on small structures (MCL, lateral meniscus): the reason v2 goes to 256 px and trains longer.
 Gold AUC was still rising at the last epoch in both folds (0.66 → 0.84 over 8 epochs).
 
+### What the leaderboard says
+
+My v1 reader scores **0.860** alone on the public LB (0.838 on gold, so gold tracks the LB with a small offset).
+The public ConvNeXt reader scores 0.929 alone and lifts the stack from 0.943 to 0.944 at weight 0.3;
+mine at weight 0.2 *drops* it to 0.937. A blend member has to be within a few points of the stack to help,
+so my reader needs to reach roughly 0.92+ on the LB (~0.90 gold) before it is worth blending.
+
 ## Kernels
 
 | Kernel | Public LB | Notes |
 |---|---|---|
 | [k01-public-stack-baseline](kernels/k01-public-stack-baseline) | 0.944 | unmodified fork of [goodpjw2008's 0.944 notebook](https://www.kaggle.com/code/goodpjw2008/rsna-knee-stack-2-5d-convnext-mil-lb-0-944) |
-| [k04-blend-w20](kernels/k04-blend-w20) | pending | k01 + my reader v1 (2 folds), rank weight 0.2 |
-| [k05-mine-only](kernels/k05-mine-only) | pending | my reader v1 alone, to calibrate the blend weight |
+| [k04-blend-w20](kernels/k04-blend-w20) | 0.937 | k01 + my reader v1 (2 folds), rank weight 0.2 |
+| [k05-mine-only](kernels/k05-mine-only) | 0.860 | my reader v1 alone, to calibrate the blend weight |
 
 ## Data
 

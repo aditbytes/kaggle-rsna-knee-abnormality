@@ -5,7 +5,8 @@ Appends cells to the k01 notebook that write my preprocess/knee/infer code to
 training-kernel outputs, and blend: final = rank((1 - w) * rank(stack) + w * rank(mine)).
 If my reader fails for any reason, the stack's submission.csv is kept unchanged.
 
-    python src/make_blend_kernel.py --name k04-blend --weight 0.2 --train-kernels k03b-effv2s
+    python src/make_blend_kernel.py --name k04-blend-w20 --weight 0.2 --train-kernels k03b-effv2s \
+        --ckpts tf_efficientnetv2_s_r224_f0.pt tf_efficientnetv2_s_r224_f1.pt
 """
 import argparse
 import json
@@ -23,11 +24,12 @@ _m_pub, _m_bak = "/kaggle/working/submission.csv", "/kaggle/working/_before_mine
 _m_shutil.copy(_m_pub, _m_bak)
 try:
     _m_t0 = _m_time.time()
-    _m_ck = sorted(p for pat in ["/kaggle/input/*/{glob}", "/kaggle/input/*/*/{glob}", "/kaggle/input/*/*/*/{glob}"]
-                   for p in _m_glob.glob(pat))
+    _m_want = {ckpts!r}
+    _m_ck = sorted({{_m_os.path.basename(p): p for pat in ["/kaggle/input/*/*.pt", "/kaggle/input/*/*/*.pt", "/kaggle/input/*/*/*/*.pt"]
+                    for p in _m_glob.glob(pat) if _m_os.path.basename(p) in _m_want}}.values())
     _m_data = next(d for pat in ["/kaggle/input/*/", "/kaggle/input/*/*/", "/kaggle/input/*/*/*/"]
                    for d in sorted(_m_glob.glob(pat)) if _m_os.path.exists(d + "test_series.csv")).rstrip("/")
-    assert _m_ck, "no checkpoints of mine found"
+    assert len(_m_ck) == len(_m_want), f"found {{len(_m_ck)}} of {{len(_m_want)}} checkpoints"
     print("my reader:", len(_m_ck), "checkpoints:", [_m_os.path.basename(c) for c in _m_ck], flush=True)
     _m_env = dict(_m_os.environ)
     # the stack's reader cell installed the JPEG decoders here; reuse them (no internet at scoring time)
@@ -63,7 +65,7 @@ def main():
     ap.add_argument("--name", required=True)
     ap.add_argument("--weight", type=float, required=True)
     ap.add_argument("--train-kernels", nargs="+", required=True)
-    ap.add_argument("--ckpt-glob", default="tf_efficientnetv2_s_r224_f*.pt")
+    ap.add_argument("--ckpts", nargs="+", required=True, help="checkpoint file names to use (picked by gold AUC)")
     args = ap.parse_args()
 
     nb = json.loads((BASE / "k01-public-stack-baseline.ipynb").read_text())
@@ -76,7 +78,7 @@ def main():
     nb["cells"].append(cell("code", "import os\nos.makedirs('/kaggle/working/my_src', exist_ok=True)\n"))
     for name in ["preprocess.py", "knee.py", "infer.py"]:
         nb["cells"].append(cell("code", f"%%writefile /kaggle/working/my_src/{name}\n" + (ROOT / "src" / name).read_text()))
-    nb["cells"].append(cell("code", BLEND.format(weight=args.weight, glob=args.ckpt_glob)))
+    nb["cells"].append(cell("code", BLEND.format(weight=args.weight, ckpts=sorted(args.ckpts))))
 
     d = ROOT / "kernels" / args.name
     d.mkdir(parents=True, exist_ok=True)

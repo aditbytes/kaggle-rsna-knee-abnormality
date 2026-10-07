@@ -18,6 +18,7 @@ import pandas as pd
 import torch
 from sklearn.metrics import roc_auc_score
 
+import knee
 from knee import LABELS, KneeNet, StudyDataset, build_study_table
 
 
@@ -35,10 +36,10 @@ def find(pattern):
     raise FileNotFoundError(pattern)
 
 
-def load_cache():
-    """Returns (series -> npy path, series -> slice count) across all cache shards."""
+def load_cache(size):
+    """Returns (series -> npy path, series -> slice count) across all shards of the size-px cache."""
     paths, n_slices = {}, {}
-    for meta in find("cache256_train_meta.csv"):
+    for meta in find(f"cache{size}_train_meta.csv"):
         d = meta.replace("_meta.csv", "")
         m = pd.read_csv(meta)
         m = m[m["error"].isna() & (m["n"] >= 3)] if "error" in m else m[m["n"] >= 3]
@@ -70,6 +71,7 @@ def main():
     ap.add_argument("--backbone", default="tf_efficientnetv2_s.in21k_ft_in1k")
     ap.add_argument("--labels", default="llm_labels_v4_blend.csv")
     ap.add_argument("--res", type=int, default=224)
+    ap.add_argument("--cache", type=int, default=256, help="which preprocessed cache to read (256 or 384 px)")
     ap.add_argument("--k", type=int, default=8, help="3-slice windows per series in training")
     ap.add_argument("--k_eval", type=int, default=12)
     ap.add_argument("--epochs", type=int, default=8)
@@ -89,7 +91,8 @@ def main():
     train_csv = pd.read_csv(find("train.csv")[0])
     series = pd.read_csv(find("train_series.csv")[0])
     soft = pd.read_csv(find(args.labels)[0]).set_index("StudyInstanceUID")[LABELS]
-    paths, n_slices = load_cache()
+    paths, n_slices = load_cache(args.cache)
+    knee.CACHE_SIZE = args.cache
     table = build_study_table(series, n_slices)
 
     gold = train_csv.dropna(subset=LABELS).set_index("StudyInstanceUID")[LABELS]

@@ -13,7 +13,7 @@ try:
     procs = []
     for gpu, fold in enumerate([2, 3]):
         env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
-        cmd = [sys.executable, "-u", "/kaggle/working/src/train.py", "--fold", str(fold), "--workers", "2"] + ['--epochs', '8']
+        cmd = [sys.executable, "-u", "/kaggle/working/src/train.py", "--fold", str(fold), "--workers", "2"] + ['--res', '256', '--epochs', '14']
         log = open(f"/kaggle/working/train_f{fold}.log", "w")
         procs.append((fold, subprocess.Popen(cmd, env=env, stdout=log, stderr=subprocess.STDOUT), log))
     print("launched folds", [f for f, _, _ in procs], flush=True)

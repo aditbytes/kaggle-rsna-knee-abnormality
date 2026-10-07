@@ -51,7 +51,8 @@ so the way up is a *different* model of my own blended into the stack.
 | k03b | My reader v1: EfficientNetV2-S, 224 px, 8 epochs, folds 0-1 | done: **0.838** gold AUC |
 | k04 / k05 | Stack + v1 at weight 0.2 / v1 alone (calibrates the blend weight) | **0.937** / **0.860**: v1 is too weak to help the stack |
 | k06 | My reader v2: 256 px, 14 epochs, all 4 folds | 3 of 4 folds diverged (lr too high); fold 2 = 0.864 gold |
-| k07 | My reader v3: 256 px, lr 1.5e-4, 1-epoch warm-up, 12 epochs | training |
+| k07 | My reader v3: 256 px, lr 1.5e-4, 1-epoch warm-up, 12 epochs | folds 0-1: **0.904 / 0.883** gold, **0.900** together; folds 2-3 training |
+| k10 / k11 | Stack + v3 (folds 0-1) at 0.15 / v3 alone | running |
 | k09 | 384 px cache at 0.4 mm (public reader's resolution), 6 CPU shards | done: 24,371 series, 0 errors |
 | final | Two picks: a safe blend and a bolder one | |
 

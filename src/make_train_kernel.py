@@ -65,13 +65,22 @@ def main():
             f"SOURCES = {pack(sources)!r}\n" + RUNNER.format(folds=args.folds, extra=args.extra))
     d = ROOT / "kernels" / args.name
     d.mkdir(parents=True, exist_ok=True)
-    (d / "train_kernel.py").write_text(code)
+    # A notebook, not a script: script kernels on GPU kept dying within seconds with no log,
+    # while every notebook kernel started fine.
+    cell = {"cell_type": "code", "metadata": {}, "outputs": [], "execution_count": None,
+            "source": code.splitlines(keepends=True)}
+    nb = {"cells": [cell], "metadata": {"kernelspec": {"name": "python3", "display_name": "Python 3",
+                                                       "language": "python"}},
+          "nbformat": 4, "nbformat_minor": 4}
+    for old in d.glob("train_kernel.py"):
+        old.unlink()
+    (d / "train_kernel.ipynb").write_text(json.dumps(nb, indent=1))
     meta = {
         "id": f"{USER}/rsna-knee-{d.name}",
         "title": f"rsna-knee-{d.name}",
-        "code_file": "train_kernel.py",
+        "code_file": "train_kernel.ipynb",
         "language": "python",
-        "kernel_type": "script",
+        "kernel_type": "notebook",
         "is_private": True,
         "enable_gpu": True,
         "enable_tpu": False,

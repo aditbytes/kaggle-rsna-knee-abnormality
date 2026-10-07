@@ -77,6 +77,7 @@ def main():
     ap.add_argument("--accum", type=int, default=2, help="gradient accumulation steps (effective batch = bs * accum)")
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--wd", type=float, default=0.05)
+    ap.add_argument("--warmup", type=float, default=0.5, help="linear warm-up length in epochs")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--limit", type=int, default=0, help="debug: use only this many training studies")
     ap.add_argument("--out", default="/kaggle/working" if os.path.isdir("/kaggle/working") else "outputs")
@@ -118,7 +119,7 @@ def main():
     rest = [p for n, p in model.named_parameters() if not n.startswith("enc.")]
     opt = torch.optim.AdamW([{"params": enc, "lr": args.lr}, {"params": rest, "lr": args.lr * 3}], weight_decay=args.wd)
     steps = args.epochs * len(train_dl) // args.accum
-    warm = max(1, len(train_dl) // (2 * args.accum))
+    warm = max(1, int(args.warmup * len(train_dl) / args.accum))
     sched = torch.optim.lr_scheduler.LambdaLR(
         opt, lambda i: min(1, (i + 1) / warm) * 0.5 * (1 + math.cos(math.pi * min(1.0, i / steps))))
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")

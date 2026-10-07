@@ -46,10 +46,11 @@ so the way up is a *different* model of my own blended into the stack.
 
 | Stage | What | Status |
 |---|---|---|
-| k01 | Fork of the public 0.944 stack, as a reference submission | submitted, scoring |
-| k02 | 256 px training cache, 4 sharded CPU kernels (~41 GB) | running |
-| k03 | My own 2.5D reader: EfficientNetV2-S on report soft labels, 4 folds on 2x T4 | ready |
-| k03 | Rank blend: stack + public reader + my reader, weights per finding | |
+| k01 | Fork of the public 0.944 stack, as a reference submission | **0.944** public LB |
+| k02 | 256 px training cache, 4 sharded CPU kernels (24,371 series, 0 errors) | done |
+| k03b | My reader v1: EfficientNetV2-S, 224 px, 8 epochs, folds 0-1 | done: **0.838** gold AUC |
+| k04 / k05 | Stack + v1 at weight 0.2 / v1 alone (calibrates the blend weight) | running |
+| k06 | My reader v2: 256 px, 14 epochs, all 4 folds | queued |
 | final | Two picks: a safe blend and a bolder one | |
 
 ## My reader (k03)
@@ -63,11 +64,33 @@ Same study-level design as the public ConvNeXt reader (Apache 2.0, credited in `
 
 ![Canonical slices](docs/canonical_slices.png)
 
+### v1 results on the 58 gold studies (folds 0+1 rank-averaged)
+
+| Finding | Model | Report labels |
+|---|---|---|
+| ACL | 0.864 | 0.987 |
+| MCL | 0.651 | 0.968 |
+| Medial Meniscus | 0.817 | 0.948 |
+| Lateral Meniscus | 0.742 | 0.879 |
+| Medial OA | 0.913 | 0.932 |
+| Lateral OA | 0.750 | 0.833 |
+| PF OA | 0.776 | 0.902 |
+| Effusion | **0.986** | 0.877 |
+| Synovitis | 0.753 | 0.790 |
+| Baker's | **0.967** | 0.944 |
+| Contusion | **0.941** | 0.860 |
+| Fracture | **0.891** | 0.793 |
+| **Macro** | **0.838** | **0.893** |
+
+The image model beats its own training labels on effusion, Baker's cyst, contusion and fracture,
+and is weakest on small structures (MCL, lateral meniscus): the reason v2 goes to 256 px and trains longer.
+Gold AUC was still rising at the last epoch in both folds (0.66 → 0.84 over 8 epochs).
+
 ## Kernels
 
 | Kernel | Public LB | Notes |
 |---|---|---|
-| [k01-public-stack-baseline](kernels/k01-public-stack-baseline) | – | unmodified fork of [goodpjw2008's 0.944 notebook](https://www.kaggle.com/code/goodpjw2008/rsna-knee-stack-2-5d-convnext-mil-lb-0-944) |
+| [k01-public-stack-baseline](kernels/k01-public-stack-baseline) | 0.944 | unmodified fork of [goodpjw2008's 0.944 notebook](https://www.kaggle.com/code/goodpjw2008/rsna-knee-stack-2-5d-convnext-mil-lb-0-944) |
 
 ## Data
 

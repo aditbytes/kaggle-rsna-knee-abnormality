@@ -49,8 +49,8 @@ so the way up is a *different* model of my own blended into the stack.
 | k01 | Fork of the public 0.944 stack, as a reference submission | **0.944** public LB |
 | k02 | 256 px training cache, 4 sharded CPU kernels (24,371 series, 0 errors) | done |
 | k03b | My reader v1: EfficientNetV2-S, 224 px, 8 epochs, folds 0-1 | done: **0.838** gold AUC |
-| k04 / k05 | Stack + v1 at weight 0.2 / v1 alone (calibrates the blend weight) | running |
-| k06 | My reader v2: 256 px, 14 epochs, all 4 folds | queued |
+| k04 / k05 | Stack + v1 at weight 0.2 / v1 alone (calibrates the blend weight) | submitted, scoring |
+| k06 | My reader v2: 256 px, 14 epochs, all 4 folds | training |
 | final | Two picks: a safe blend and a bolder one | |
 
 ## My reader (k03)
@@ -91,6 +91,8 @@ Gold AUC was still rising at the last epoch in both folds (0.66 → 0.84 over 8 
 | Kernel | Public LB | Notes |
 |---|---|---|
 | [k01-public-stack-baseline](kernels/k01-public-stack-baseline) | 0.944 | unmodified fork of [goodpjw2008's 0.944 notebook](https://www.kaggle.com/code/goodpjw2008/rsna-knee-stack-2-5d-convnext-mil-lb-0-944) |
+| [k04-blend-w20](kernels/k04-blend-w20) | pending | k01 + my reader v1 (2 folds), rank weight 0.2 |
+| [k05-mine-only](kernels/k05-mine-only) | pending | my reader v1 alone, to calibrate the blend weight |
 
 ## Data
 

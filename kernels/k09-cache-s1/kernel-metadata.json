@@ -1,0 +1,17 @@
+{
+  "id": "sinhaaditya5/rsna-knee-k09-cache384-s1",
+  "title": "rsna-knee-k09-cache384-s1",
+  "code_file": "k02_cache.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "kernel_sources": [],
+  "model_sources": []
+}

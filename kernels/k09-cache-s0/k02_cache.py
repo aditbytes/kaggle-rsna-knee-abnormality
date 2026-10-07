@@ -1,3 +1,10 @@
+# Builds shard 0/6 of the 384 px training cache for my own knee MRI model.
+# Generated from src/preprocess.py by src/make_cache_kernels.py; edit those, not this file.
+import os, subprocess, sys
+os.environ["KNEE_SIZE"], os.environ["KNEE_MM"] = "384", "0.4"
+subprocess.run([sys.executable, "-m", "pip", "install", "-q",
+                "pylibjpeg", "pylibjpeg-libjpeg", "pylibjpeg-openjpeg"], check=True)
+
 # Adapted from goodpjw2008's RSNA Knee 2.5D ConvNeXt reader (Apache 2.0):
 # https://www.kaggle.com/code/goodpjw2008/rsna-knee-stack-2-5d-convnext-mil-lb-0-944
 """Turn each DICOM series into a canonical uint8 volume [n_slices, SIZE, SIZE].
@@ -190,6 +197,6 @@ def main():
         df.to_csv(meta, index=False)
         print("done", len(df), "errors:", int(df["error"].notna().sum()) if "error" in df else 0)
 
-
-if __name__ == "__main__":
+if __name__ == "__main__":  # the guard keeps multiprocessing workers from re-running the job
+    sys.argv = ["preprocess.py", "train", "0", "6"]
     main()

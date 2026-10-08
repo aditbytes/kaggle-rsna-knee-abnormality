@@ -1,0 +1,27 @@
+{
+  "id": "sinhaaditya5/rsna-knee-k13a-effv2s-c384-r320",
+  "title": "rsna-knee-k13a-effv2s-c384-r320",
+  "code_file": "train_kernel.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [
+    "stevenleehans/rsna-knee-llm-report-labels"
+  ],
+  "competition_sources": [
+    "rsna-knee-abnormality-detection"
+  ],
+  "kernel_sources": [
+    "sinhaaditya5/rsna-knee-k09-cache384-s0",
+    "sinhaaditya5/rsna-knee-k09-cache384-s1",
+    "sinhaaditya5/rsna-knee-k09-cache384-s2",
+    "sinhaaditya5/rsna-knee-k09-cache384-s3",
+    "sinhaaditya5/rsna-knee-k09-cache384-s4",
+    "sinhaaditya5/rsna-knee-k09-cache384-s5"
+  ],
+  "model_sources": []
+}

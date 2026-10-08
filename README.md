@@ -51,8 +51,10 @@ so the way up is a *different* model of my own blended into the stack.
 | k03b | My reader v1: EfficientNetV2-S, 224 px, 8 epochs, folds 0-1 | done: **0.838** gold AUC |
 | k04 / k05 | Stack + v1 at weight 0.2 / v1 alone (calibrates the blend weight) | **0.937** / **0.860**: v1 is too weak to help the stack |
 | k06 | My reader v2: 256 px, 14 epochs, all 4 folds | 3 of 4 folds diverged (lr too high); fold 2 = 0.864 gold |
-| k07 | My reader v3: 256 px, lr 1.5e-4, 1-epoch warm-up, 12 epochs | folds 0-1: **0.904 / 0.883** gold, **0.900** together; folds 2-3 training |
-| k10 / k11 | Stack + v3 (folds 0-1) at 0.15 / v3 alone | running |
+| k07 | My reader v3: 256 px, lr 1.5e-4, 1-epoch warm-up, 12 epochs | folds **0.904 / 0.883 / 0.892 / 0.888** gold, **0.902** all 4 together |
+| k10 / k11 | Stack + v3 (folds 0-1) at 0.15 / v3 alone | **0.943** / **0.923** |
+| k12 | Stack + v3 (all 4 folds) at 0.25 | submitted |
+| k13 | My reader v4: 384 px cache, 320 px input, folds 0-1 | training |
 | k09 | 384 px cache at 0.4 mm (public reader's resolution), 6 CPU shards | done: 24,371 series, 0 errors |
 | final | Two picks: a safe blend and a bolder one | |
 
@@ -103,6 +105,8 @@ so my reader needs to reach roughly 0.92+ on the LB (~0.90 gold) before it is wo
 | [k01-public-stack-baseline](kernels/k01-public-stack-baseline) | 0.944 | unmodified fork of [goodpjw2008's 0.944 notebook](https://www.kaggle.com/code/goodpjw2008/rsna-knee-stack-2-5d-convnext-mil-lb-0-944) |
 | [k04-blend-w20](kernels/k04-blend-w20) | 0.937 | k01 + my reader v1 (2 folds), rank weight 0.2 |
 | [k05-mine-only](kernels/k05-mine-only) | 0.860 | my reader v1 alone, to calibrate the blend weight |
+| [k10-blend-v3-w15](kernels/k10-blend-v3-w15) | 0.943 | k01 + v3 folds 0-1 at 0.15 |
+| [k11-v3-only](kernels/k11-v3-only) | 0.923 | v3 folds 0-1 alone |
 
 ## Data
 

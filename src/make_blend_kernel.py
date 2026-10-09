@@ -73,7 +73,7 @@ def main():
         f"# {args.name} · public stack + my reader (weight {args.weight})\n\n"
         "Base: unmodified fork of [goodpjw2008's 0.944 notebook](https://www.kaggle.com/code/goodpjw2008/rsna-knee-stack-2-5d-convnext-mil-lb-0-944) "
         "(Apache 2.0). The last cells add my EfficientNetV2-S reader, trained on report soft labels "
-        "([repo](https://github.com/aditbytes/kaggle-rsna-knee-abnormality)), as one more rank-blend member.\n")
+        "([repo](https://github.com/sinhaaditya5/kaggle-rsna-knee-abnormality)), as one more rank-blend member.\n")
     nb["cells"].append(cell("markdown", "## My reader\n\nWrite my code, run it on the test DICOMs, blend.\n"))
     nb["cells"].append(cell("code", "import os\nos.makedirs('/kaggle/working/my_src', exist_ok=True)\n"))
     for name in ["preprocess.py", "knee.py", "infer.py"]:

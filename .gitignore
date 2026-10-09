@@ -30,3 +30,4 @@ submission.csv
 # MLflow tracking store (rebuilt any time with `python src/track.py`)
 mlflow.db
 mlruns/
+.claude/

@@ -123,6 +123,20 @@ data -> /Volumes/Aditya ssd/KAGGLE_DATA/rsna-knee-abnormality-detection
 
 Training and submissions run on Kaggle, where the full ~500 GB is mounted; the Mac (M4, 16 GB) is for code, EDA and small experiments.
 
+## Experiment tracking (MLflow)
+
+Training runs on Kaggle, so [src/track.py](src/track.py) syncs results into a local MLflow store after each run:
+
+- **rsna-knee/training**: one run per kernel and fold, with every `train.py` argument as a parameter, loss /
+  held-out AUC / gold AUC per epoch, and per-finding gold AUC.
+- **rsna-knee/submissions**: one run per leaderboard submission with its public score (pulled from the Kaggle API).
+
+```bash
+kaggle kernels output sinhaaditya5/rsna-knee-<kernel> -p data/runs/<kernel>   # fetch a finished training kernel
+python src/track.py                                                          # add new runs and scores (idempotent)
+mlflow ui --backend-store-uri sqlite:///mlflow.db                            # http://127.0.0.1:5000
+```
+
 ## How to run
 
 ```bash
@@ -135,7 +149,7 @@ python src/eda.py                           # -> reports/eda.md
 ## Repo layout
 
 ```
-src/        download_sample.py, eda.py, preprocess.py, knee.py, train.py,
+src/        download_sample.py, eda.py, preprocess.py, knee.py, train.py, evaluate.py, track.py,
             make_cache_kernels.py, make_train_kernel.py
 kernels/    Kaggle notebooks (each folder has kernel-metadata.json; push with `kaggle kernels push -p kernels/<name>`)
 reports/    eda.md

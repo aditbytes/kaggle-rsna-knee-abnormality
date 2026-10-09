@@ -26,3 +26,7 @@ __pycache__/
 
 # Kaggle writes this to /kaggle/working
 submission.csv
+
+# MLflow tracking store (rebuilt any time with `python src/track.py`)
+mlflow.db
+mlruns/

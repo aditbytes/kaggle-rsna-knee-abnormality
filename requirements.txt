@@ -13,5 +13,7 @@ torch>=2.5
 timm>=1.0
 # Kaggle CLI + notebooks
 kaggle>=1.7
+# experiment tracking (local store, synced from Kaggle outputs by src/track.py)
+mlflow>=3.0
 nbconvert>=7.16
 ipykernel>=6.29
